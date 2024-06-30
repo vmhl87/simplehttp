@@ -3,6 +3,7 @@
 import http.server
 import socketserver
 import mimetypes
+import time
 import sys
 import os
 
@@ -27,7 +28,7 @@ def finish_progress(filename, nonce):
     current.pop(nonce, None)
     print("\r" + ' '*os.get_terminal_size().columns, end='')
     sys.stdout.flush()
-    print("\rcomplete " + filename)
+    print(f"\r{time.strftime('%-I:%M %p')} {filename}")
 def disp_progress(progress, filename, nonce):
     global current
     if nonce not in current:
@@ -74,30 +75,37 @@ class ProgressHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
         """Send the response header and file size for progress tracking."""
         path = self.translate_path(self.path)
 
-        if self.path == "/":
+        if os.path.isdir(path):
             f = FakeFile()
 
-            f.write("<h1>Powered by SimpleHTTP</h1><hr><ul>")
+            f.write(f"<h1>Listing for {self.path[1:]}/</h1><hr><ul>")
+
+            if self.path != "/":
+                f.write(f"<li><a href={os.path.dirname(self.path)}>..</a></li>")
 
             for file in os.listdir(path):
                 filename = os.fsdecode(file)
+                pathname = os.path.join(self.path, filename)
+
+                f.write("<li>")
+
                 if os.path.isfile(os.path.join(path, filename)):
-                    filesize = os.path.getsize(os.path.join(path, filename))
-                    level = 0
+                    filesize, level = os.path.getsize(os.path.join(path, filename)), 0
+
                     while filesize >= 1000:
                         filesize, level = filesize/1000, level+1
-                    level = ["B", "KB", "MB", "GB", "TB"][level]
-                    sz = ""
-                    sz += str(int(filesize))
-                    if level != "B" and filesize < 10:
-                        sz += '.'
-                        filesize -= int(filesize)
-                        filesize *= 10
-                        sz += str(int(filesize))
-                    f.write(f"<li>[{sz}{level}] ")
-                    f.write(f"<a href='{filename}'>{filename}</a></li>")
 
-            f.write("</ul><hr>2024 Vincent Loh")
+                    level, sz = ["B", "KB", "MB", "GB", "TB"][level], str(int(filesize))
+
+                    if level != "B" and filesize < 10:
+                        filesize = (filesize - int(filesize)) * 10
+                        sz += '.' + str(int(filesize))
+
+                    f.write(f"[{sz}{level}] ")
+
+                f.write(f"<a href='{pathname}'>{filename}</a></li>")
+
+            f.write("</ul><hr>powered by simpleHTTP  -  2024 vincent loh")
             
             self.file_size = f.getsize()
 
@@ -106,13 +114,9 @@ class ProgressHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-Length", str(self.file_size))
             self.end_headers()
 
-            self.file_name = "home"
+            self.file_name = self.path[1:] + '/'
 
             return f
-
-        if os.path.isdir(path):
-            self.send_error(404, "File not found")
-            return None
         
         try:
             self.file_size = os.path.getsize(path)
