@@ -6,6 +6,7 @@ import time
 import sys
 import os
 
+
 PORT = 8000
 
 if len(sys.argv) == 2:
@@ -15,11 +16,13 @@ if len(sys.argv) == 2:
 
     PORT = int(sys.argv[1])
 
+
 _cur = 0
 def gen_nonce():
     global _cur
     _cur += 1
     return _cur
+
 
 current = {}
 
@@ -52,6 +55,7 @@ def disp_progress(progress, filename, nonce):
     print(res, end='')
     sys.stdout.flush()
 
+
 class FakeFile:
     def __init__(self):
         self.str = ""
@@ -71,6 +75,7 @@ class FakeFile:
 
     def close(self):
         pass
+
 
 class ProgressHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def send_head(self):
@@ -107,7 +112,7 @@ class ProgressHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
                 f.write(f"<a href='{pathname}'>{filename}</a></li>")
 
-            f.write("</ul><hr>powered by simpleHTTP  -  2024 vincent loh")
+            f.write("</ul><hr>powered by <a href='https://github.com/vmhl87/simplehttp'>simpleHTTP</a>  -  2024 vincent loh")
             
             self.file_size = f.getsize()
 
@@ -176,6 +181,7 @@ class ProgressHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     
     def log_message(self, format, *args):
         pass
+
 
 Handler = ProgressHTTPRequestHandler
 
