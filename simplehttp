@@ -1,7 +1,6 @@
 #!/home/vincent/.local/bin/python3
 
 import http.server
-import socketserver
 import mimetypes
 import time
 import sys
@@ -23,12 +22,14 @@ def gen_nonce():
     return _cur
 
 current = {}
+
 def finish_progress(filename, nonce):
     global current
     current.pop(nonce, None)
-    print("\r" + ' '*os.get_terminal_size().columns, end='')
-    sys.stdout.flush()
-    print(f"\r{time.strftime('%-I:%M %p')} {filename}")
+    fin = f"\r{time.strftime('%-I:%M %p')} {filename}"
+    fin += ' '*(os.get_terminal_size().columns - len(fin))
+    print(fin)
+
 def disp_progress(progress, filename, nonce):
     global current
     if nonce not in current:
@@ -38,13 +39,14 @@ def disp_progress(progress, filename, nonce):
     res = "\r"
     first = True
     for non in current:
-        if not first: res += " | "
+        if not first: res += "   "
         first = False
-        res += f"[{current[non][0]:.2f}% "
-        chunk = 10
-        lower = int(chunk * current[non][0] / 100)
-        res += '='*lower + ' '*(chunk-lower)
-        res += f"] {current[non][1]}"
+        res += f"[{int(current[non][0])}% "
+        chunk = 8
+        lower = int(chunk * current[non][0] / 50)
+        prog = '='*(lower//2) + '-'*(lower-(lower//2)*2)
+        prog += ' '*(chunk - len(prog))
+        res += f"{prog} {current[non][1]}]"
     if len(res) > os.get_terminal_size().columns:
         res = res[:os.get_terminal_size().columns - 2] + '..'
     print(res, end='')
@@ -177,7 +179,7 @@ class ProgressHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
 
 Handler = ProgressHTTPRequestHandler
 
-with socketserver.TCPServer(("", PORT), Handler) as httpd:
+with http.server.ThreadingHTTPServer(("", PORT), Handler) as httpd:
     print(f"Serving at port {PORT}")
 
     try:
