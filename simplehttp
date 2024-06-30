@@ -148,6 +148,7 @@ class ProgressHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             
             return open(path, 'rb')
         except Exception as e:
+            print(f"404 {self.path[1:]}")
             self.send_error(404, "File not found")
             return None
 
