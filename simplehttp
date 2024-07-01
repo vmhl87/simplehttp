@@ -26,19 +26,7 @@ def gen_nonce():
 
 current = {}
 
-def finish_progress(filename, nonce):
-    global current
-    current.pop(nonce, None)
-    fin = f"\r{time.strftime('%-I:%M %p')} {filename}"
-    fin += ' '*(os.get_terminal_size().columns - len(fin))
-    print(fin)
-
-def disp_progress(progress, filename, nonce):
-    global current
-    if nonce not in current:
-        current[nonce] = [progress, filename]
-    else:
-        current[nonce][0] = progress
+def update():
     res = "\r"
     first = True
     for non in current:
@@ -54,6 +42,23 @@ def disp_progress(progress, filename, nonce):
         res = res[:os.get_terminal_size().columns - 2] + '..'
     print(res, end='')
     sys.stdout.flush()
+
+def interject(s):
+    print('\r' + s + ' '*(os.get_terminal_size().columns - len(s)))
+    update();
+
+def finish_progress(filename, nonce):
+    global current
+    current.pop(nonce, None)
+    interject(f"{time.strftime('%-I:%M %p')} {filename}")
+    
+def disp_progress(progress, filename, nonce):
+    global current
+    if nonce not in current:
+        current[nonce] = [progress, filename]
+    else:
+        current[nonce][0] = progress
+    update()
 
 
 class FakeFile:
@@ -148,7 +153,7 @@ class ProgressHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
             
             return open(path, 'rb')
         except Exception as e:
-            print(f"404 {self.path[1:]}")
+            interject(f"404 {self.path[1:]}")
             self.send_error(404, "File not found")
             return None
 
@@ -169,7 +174,8 @@ class ProgressHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                         break
                     try:
                         self.wfile.write(chunk)
-                    except:
+                    except Exception as e:
+                        interject(str(e))
                         break
                     bytes_sent += len(chunk)
                     
